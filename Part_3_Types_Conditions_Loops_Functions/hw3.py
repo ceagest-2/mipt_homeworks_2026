@@ -21,16 +21,18 @@ LEAP_FEBRUARY_DAYS = 29
 COMMON_FEBRUARY_DAYS = 28
 FEBRUARY_MONTH = 2
 THE_EDGE_CASE = 2
-MONTHS_WITH_30_DAYS = (4, 6, 9, 11)
+MONTHS_WITH_THIRTY_DAYS = (4, 6, 9, 11)
 STRING_ZERO = "0"
 POINT_ZERO = ".0"
 
 
 def is_leap_year(year: int) -> bool:
-    divisible_by_4 = year % 4 == 0
-    divisible_by_100 = year % 100 == 0
-    divisible_by_400 = year % 400 == 0
-    return bool((divisible_by_4 and not divisible_by_100) or divisible_by_400)
+    is_div_by_four = year % 4 == 0
+    is_div_by_hundred = year % 100 == 0
+    is_div_by_four_hundred = year % 400 == 0
+    return bool(
+        (is_div_by_four and not is_div_by_hundred) or is_div_by_four_hundred,
+    )
 
 
 def extract_date(maybe_dt: str) -> tuple[int, int, int] | None:
@@ -67,10 +69,18 @@ def valid_day(maybe_day: str, month: int, year: int) -> bool:
     maybe_day_number = int(maybe_day.lstrip(STRING_ZERO) or STRING_ZERO)
 
     if month == FEBRUARY_MONTH:
-        max_days = LEAP_FEBRUARY_DAYS if is_leap_year(year) else COMMON_FEBRUARY_DAYS
+        max_days = (
+            LEAP_FEBRUARY_DAYS
+            if is_leap_year(year)
+            else COMMON_FEBRUARY_DAYS
+        )
         return 1 <= maybe_day_number <= max_days
 
-    max_days = SHORT_MONTH_DAYS if month in MONTHS_WITH_30_DAYS else LONG_MONTH_DAYS
+    max_days = (
+        SHORT_MONTH_DAYS
+        if month in MONTHS_WITH_THIRTY_DAYS
+        else LONG_MONTH_DAYS
+    )
     return 1 <= maybe_day_number <= max_days
 
 
@@ -104,8 +114,12 @@ def _check_float_parts(normalized: str) -> bool:
     if len(parts) != LEN_SMALL_BLOOKS:
         return False
     first_is_decimal = parts[0].isdecimal()
-    first_is_negative = len(parts[0]) > 1 and parts[0][0] == "-" and parts[0][1:].isdecimal()
-    first_valid = first_is_decimal or first_is_negative
+    is_negative_number = (
+        len(parts[0]) > 1
+        and parts[0][0] == "-"
+        and parts[0][1:].isdecimal()
+    )
+    first_valid = first_is_decimal or is_negative_number
     return bool(first_valid and parts[1].isdecimal())
 
 
@@ -134,7 +148,10 @@ def adding_income(receipt_line: str, receipts: list[tuple[float, str]]) -> None:
     receipts.append((amount, date))
 
 
-def adding_an_expense(expense_line: str, expenses: list[tuple[str, float, str]]) -> None:
+def adding_an_expense(
+    expense_line: str,
+    expenses: list[tuple[str, float, str]],
+) -> None:
     blocks = expense_line.split(" ")
     category = blocks[1]
     amount = float(blocks[2].replace(",", "."))
@@ -142,75 +159,104 @@ def adding_an_expense(expense_line: str, expenses: list[tuple[str, float, str]])
     expenses.append((category, amount, date))
 
 
-def _compare_years(date1: tuple[int, int, int], date2: tuple[int, int, int]) -> int:
+def _compare_years(
+    date_one: tuple[int, int, int],
+    date_two: tuple[int, int, int],
+) -> int:
     """Compare years of two dates."""
-    if date1[2] < date2[2]:
+    if date_one[2] < date_two[2]:
         return 1
-    return -1 if date1[2] > date2[2] else 0
+    return -1 if date_one[2] > date_two[2] else 0
 
 
-def _compare_months(date1: tuple[int, int, int], date2: tuple[int, int, int]) -> int:
+def _compare_months(
+    date_one: tuple[int, int, int],
+    date_two: tuple[int, int, int],
+) -> int:
     """Compare months of two dates."""
-    if date1[1] < date2[1]:
+    if date_one[1] < date_two[1]:
         return 1
-    return -1 if date1[1] > date2[1] else 0
+    return -1 if date_one[1] > date_two[1] else 0
 
 
-def _compare_days(date1: tuple[int, int, int], date2: tuple[int, int, int]) -> int:
+def _compare_days(
+    date_one: tuple[int, int, int],
+    date_two: tuple[int, int, int],
+) -> int:
     """Compare days of two dates."""
-    if date1[0] < date2[0]:
+    if date_one[0] < date_two[0]:
         return 1
-    return -1 if date1[0] > date2[0] else 0
+    return -1 if date_one[0] > date_two[0] else 0
 
 
-def compare_dates_by_month(date1_str: str, date2_str: str) -> int:
-    date1 = extract_date(date1_str)
-    date2 = extract_date(date2_str)
-    if date1 is None or date2 is None:
+def compare_dates_by_month(date_one_str: str, date_two_str: str) -> int:
+    """Compare dates by month and year."""
+    date_one = extract_date(date_one_str)
+    date_two = extract_date(date_two_str)
+    if date_one is None or date_two is None:
         return 0
-    years_equal = date1[2] == date2[2]
-    months_equal = date1[1] == date2[1]
+    years_equal = date_one[2] == date_two[2]
+    months_equal = date_one[1] == date_two[1]
     if not years_equal or not months_equal:
         return 2
-    return -1 if date1[0] > date2[0] else (1 if date1[0] < date2[0] else 0)
+    return (
+        -1
+        if date_one[0] > date_two[0]
+        else (1 if date_one[0] < date_two[0] else 0)
+    )
 
 
-def compare_dates(date1_str: str, date2_str: str) -> int:
-    date1 = extract_date(date1_str)
-    date2 = extract_date(date2_str)
-    if date1 is None or date2 is None:
+def _get_day_comparison(
+    date_one: tuple[int, int, int],
+    date_two: tuple[int, int, int],
+) -> int:
+    """Get comparison result for days."""
+    if date_one[0] > date_two[0]:
+        return -1
+    return 1 if date_one[0] < date_two[0] else 0
+
+
+def compare_dates(date_one_str: str, date_two_str: str) -> int:
+    """Compare two dates."""
+    date_one = extract_date(date_one_str)
+    date_two = extract_date(date_two_str)
+    if date_one is None or date_two is None:
         return 0
 
-    year_cmp = _compare_years(date1, date2)
+    year_cmp = _compare_years(date_one, date_two)
     if year_cmp != 0:
         return year_cmp
 
-    month_cmp = _compare_months(date1, date2)
+    month_cmp = _compare_months(date_one, date_two)
     if month_cmp != 0:
         return month_cmp
 
-    return _compare_days(date1, date2)
+    return _get_day_comparison(date_one, date_two)
 
 
-def _accumulate_income(receipts_list: list[tuple[float, str]], date: str) -> tuple[float, float]:
+def _accumulate_income(
+    receipts_list: list[tuple[float, str]],
+    date: str,
+) -> tuple[float, float]:
     """Accumulate income data."""
-    capital = 0.0
-    total = 0.0
+    capital = 0
+    total = 0
     for amount, current_date in receipts_list:
         if compare_dates(current_date, date) >= 0:
             capital += amount
         month_cmp = compare_dates_by_month(current_date, date)
         if month_cmp >= 0 and month_cmp != THE_EDGE_CASE:
             total += amount
-    return capital, total
+    return float(capital), float(total)
 
 
 def _accumulate_expenses(
-    expenses_list: list[tuple[str, float, str]], date: str
+    expenses_list: list[tuple[str, float, str]],
+    date: str,
 ) -> tuple[float, float, dict[str, float]]:
     """Accumulate expense data."""
-    capital = 0.0
-    total = 0.0
+    capital = 0
+    total = 0
     categories: dict[str, float] = {}
     for category, amount, current_date in expenses_list:
         if compare_dates(current_date, date) >= 0:
@@ -218,9 +264,9 @@ def _accumulate_expenses(
         month_cmp = compare_dates_by_month(current_date, date)
         if month_cmp >= 0 and month_cmp != THE_EDGE_CASE:
             total += amount
-            current = categories.get(category, 0.0)
+            current = categories.get(category, 0)
             categories[category] = current + amount
-    return capital, total, categories
+    return float(capital), float(total), categories
 
 
 def _print_statistics_header(date: str) -> None:
@@ -228,15 +274,21 @@ def _print_statistics_header(date: str) -> None:
     print(f"Ваша статистика по состоянию на {date}:")
 
 
-def _print_capital_and_profit(total_capital: float, receipts: float, expenses: float) -> None:
+def _print_capital_and_profit(
+    total_capital: float,
+    receipts: float,
+    expenses: float,
+) -> None:
     """Print capital and profit information."""
     print(f"Суммарный капитал: {total_capital:.2f} рублей")
     difference = receipts - expenses
     if difference >= 0:
-        print(f"В этом месяце прибыль составила {difference:.2f} рублей")  # noqa: RUF001
+        msg = f"В этом месяце прибыль составила {difference:.2f} рублей"  # noqa: RUF001
+        print(msg)
     else:
         loss = -difference
-        print(f"В этом месяце убыток составил {loss:.2f} рублей")  # noqa: RUF001
+        msg = f"В этом месяце убыток составил {loss:.2f} рублей"  # noqa: RUF001
+        print(msg)
 
 
 def _print_income_expense(receipts: float, expenses: float) -> None:
@@ -254,19 +306,37 @@ def _print_categories(categories: dict[str, float]) -> None:
         print(f"{index}. {key}: {amount:.2f}")
 
 
+def _get_statistics_data(
+    receipts_list: list[tuple[float, str]],
+    expenses_list: list[tuple[str, float, str]],
+    date: str,
+) -> tuple[float, float, float, dict[str, float]]:
+    """Get statistics data for a specific date."""
+    income_capital, receipts = _accumulate_income(receipts_list, date)
+    expense_capital, expenses, categories = _accumulate_expenses(
+        expenses_list,
+        date,
+    )
+    total_capital = income_capital + expense_capital
+    return total_capital, receipts, expenses, categories
+
+
 def get_statistics(
     line: str,
     receipts_list: list[tuple[float, str]],
     expenses_list: list[tuple[str, float, str]],
 ) -> None:
+    """Get and display statistics for a given date."""
     blocks = line.split(" ")
     date = blocks[1]
     _print_statistics_header(date)
 
-    income_capital, receipts = _accumulate_income(receipts_list, date)
-    expense_capital, expenses, categories = _accumulate_expenses(expenses_list, date)
+    total_capital, receipts, expenses, categories = _get_statistics_data(
+        receipts_list,
+        expenses_list,
+        date,
+    )
 
-    total_capital = income_capital + expense_capital
     _print_capital_and_profit(total_capital, receipts, expenses)
     _print_income_expense(receipts, expenses)
     _print_categories(categories)
@@ -321,6 +391,7 @@ def _handle_command(
 
 
 def operation_validation(operation: str) -> str:
+    """Validate the operation string."""
     blocks = operation.split(" ")
     if len(blocks) > LEN_BIG_BLOOKS or len(blocks) == 1:
         return UNKNOWN_COMMAND_MSG
@@ -336,6 +407,7 @@ def operation_validation(operation: str) -> str:
 
 
 def main() -> None:
+    """Main function to run the program."""
     receipts_list: list[tuple[float, str]] = []
     expenses_list: list[tuple[str, float, str]] = []
     while True:
