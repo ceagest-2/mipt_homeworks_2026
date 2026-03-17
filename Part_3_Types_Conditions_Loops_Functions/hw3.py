@@ -24,7 +24,6 @@ THE_EDGE_CASE = 2
 MONTHS = (4, 6, 9, 11)
 STRING_ZERO = "0"
 POINT_ZERO = ".0"
-DEFAULT_ZERO = 0.0
 
 
 def is_leap_year(year: int) -> bool:
@@ -246,7 +245,7 @@ def _update_categories(
 ) -> None:
     """Update category amounts if in month range."""
     if month_factor:
-        current = categories.get(category, DEFAULT_ZERO)
+        current = categories.get(category, 0)
         categories[category] = current + amount
 
 
@@ -344,12 +343,18 @@ def _display_stats(
     _print_categories(categories)
 
 
-def _get_stats_values(
-    income_capital: float, expense_capital: float,
-) -> tuple[float, float, float, float]:
-    """Get statistics values."""
+def _prepare_stats(
+    receipts_list: list[tuple[float, str]],
+    expenses_list: list[tuple[str, float, str]],
+    date: str,
+) -> tuple[float, float, float, dict[str, float]]:
+    """Prepare statistics data."""
+    income_capital, receipts = _accumulate_income(receipts_list, date)
+    expense_capital, expenses, categories = _accumulate_expenses(
+        expenses_list, date
+    )
     total_capital = income_capital + expense_capital
-    return total_capital, income_capital, expense_capital, total_capital
+    return total_capital, receipts, expenses, categories
 
 
 def print_statistics(
@@ -358,11 +363,8 @@ def print_statistics(
     expenses_list: list[tuple[str, float, str]],
 ) -> None:
     """Print statistics for the given date."""
-    income_capital, receipts = _accumulate_income(receipts_list, date)
-    expense_capital, expenses, categories = _accumulate_expenses(
-        expenses_list, date
-    )
-    total_capital, _, _, _ = _get_stats_values(income_capital, expense_capital)
+    stats = _prepare_stats(receipts_list, expenses_list, date)
+    total_capital, receipts, expenses, categories = stats
     _display_stats(date, total_capital, receipts, expenses, categories)
 
 
