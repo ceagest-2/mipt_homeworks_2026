@@ -195,37 +195,67 @@ def compare_dates(date1_str: str, date2_str: str) -> int:
     return _compare_value(date1[0], date2[0])
 
 
+def _process_income_item(
+    amount: float, current_date: str, date: str
+) -> tuple[float, float]:
+    """Process single income item."""
+    capital = 0.0
+    total = 0.0
+    if compare_dates(current_date, date) >= 0:
+        capital = amount
+    month_cmp = compare_dates_by_month(current_date, date)
+    if month_cmp >= 0 and month_cmp != THE_EDGE_CASE:
+        total = amount
+    return capital, total
+
+
 def _accumulate_income(
     receipts_list: list[tuple[float, str]], date: str
 ) -> tuple[float, float]:
     """Accumulate income data."""
-    capital = 0
-    total = 0
+    total_capital = 0.0
+    total_receipts = 0.0
     for amount, current_date in receipts_list:
-        if compare_dates(current_date, date) >= 0:
-            capital += amount
-        month_cmp = compare_dates_by_month(current_date, date)
-        if month_cmp >= 0 and month_cmp != THE_EDGE_CASE:
-            total += amount
-    return float(capital), float(total)
+        cap, rec = _process_income_item(amount, current_date, date)
+        total_capital += cap
+        total_receipts += rec
+    return total_capital, total_receipts
+
+
+def _process_expense_item(
+    category: str,
+    amount: float,
+    current_date: str,
+    date: str,
+    categories: dict[str, float],
+) -> tuple[float, float]:
+    """Process single expense item."""
+    capital = 0.0
+    total = 0.0
+    if compare_dates(current_date, date) >= 0:
+        capital = amount
+    month_cmp = compare_dates_by_month(current_date, date)
+    if month_cmp >= 0 and month_cmp != THE_EDGE_CASE:
+        total = amount
+        current = categories.get(category, 0.0)
+        categories[category] = current + amount
+    return capital, total
 
 
 def _accumulate_expenses(
     expenses_list: list[tuple[str, float, str]], date: str
 ) -> tuple[float, float, dict[str, float]]:
     """Accumulate expense data."""
-    capital = 0
-    total = 0
+    total_capital = 0.0
+    total_expenses = 0.0
     categories: dict[str, float] = {}
     for category, amount, current_date in expenses_list:
-        if compare_dates(current_date, date) >= 0:
-            capital -= amount
-        month_cmp = compare_dates_by_month(current_date, date)
-        if month_cmp >= 0 and month_cmp != THE_EDGE_CASE:
-            total += amount
-            current = categories.get(category, 0)
-            categories[category] = current + amount
-    return float(capital), float(total), categories
+        cap, exp = _process_expense_item(
+            category, amount, current_date, date, categories
+        )
+        total_capital -= cap
+        total_expenses += exp
+    return total_capital, total_expenses, categories
 
 
 def _print_statistics_header(date: str) -> None:
@@ -258,6 +288,14 @@ def _print_categories(categories: dict[str, float]) -> None:
         print(f"{index}. {key}: {amount:.2f}")
 
 
+def _get_capital_and_profit(
+    income_capital: float, expense_capital: float
+) -> tuple[float, float, float]:
+    """Get total capital and calculate profit/loss."""
+    total_capital = income_capital + expense_capital
+    return total_capital, income_capital, expense_capital
+
+
 def print_statistics(
     date: str,
     receipts_list: list[tuple[float, str]],
@@ -271,7 +309,7 @@ def print_statistics(
         expenses_list, date
     )
 
-    total_capital = income_capital + expense_capital
+    total_capital, _, _ = _get_capital_and_profit(income_capital, expense_capital)
     print(f"Суммарный капитал: {total_capital:.2f} рублей")
     _print_profit_loss(receipts, expenses)
     _print_income_expense(receipts, expenses)
