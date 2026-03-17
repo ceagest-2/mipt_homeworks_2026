@@ -24,6 +24,7 @@ THE_EDGE_CASE = 2
 MONTHS = (4, 6, 9, 11)
 STRING_ZERO = "0"
 POINT_ZERO = ".0"
+DEFAULT_ZERO = 0.0
 
 
 def is_leap_year(year: int) -> bool:
@@ -245,7 +246,7 @@ def _update_categories(
 ) -> None:
     """Update category amounts if in month range."""
     if month_factor:
-        current = categories.get(category, 0.0)
+        current = categories.get(category, DEFAULT_ZERO)
         categories[category] = current + amount
 
 
@@ -272,15 +273,23 @@ def _sum_expense_data(
     return total_capital, total_expenses
 
 
+def _create_expenses_data(
+    expenses_list: list[tuple[str, float, str]], date: str,
+    categories: dict[str, float],
+) -> list[tuple[float, float]]:
+    """Create expenses data list."""
+    return [
+        _process_expense_item(category, amount, current_date, date, categories)
+        for category, amount, current_date in expenses_list
+    ]
+
+
 def _accumulate_expenses(
     expenses_list: list[tuple[str, float, str]], date: str
 ) -> tuple[float, float, dict[str, float]]:
     """Accumulate expense data."""
     categories: dict[str, float] = {}
-    expenses_data = [
-        _process_expense_item(category, amount, current_date, date, categories)
-        for category, amount, current_date in expenses_list
-    ]
+    expenses_data = _create_expenses_data(expenses_list, date, categories)
     total_capital, total_expenses = _sum_expense_data(expenses_data)
     return total_capital, total_expenses, categories
 
@@ -335,12 +344,12 @@ def _display_stats(
     _print_categories(categories)
 
 
-def _compute_totals(
-    income_capital: float, expense_capital: float, receipts: float, expenses: float
-) -> tuple[float, float, float]:
-    """Compute total capital and return all necessary values."""
+def _get_stats_values(
+    income_capital: float, expense_capital: float,
+) -> tuple[float, float, float, float]:
+    """Get statistics values."""
     total_capital = income_capital + expense_capital
-    return total_capital, receipts, expenses
+    return total_capital, income_capital, expense_capital, total_capital
 
 
 def print_statistics(
@@ -353,10 +362,8 @@ def print_statistics(
     expense_capital, expenses, categories = _accumulate_expenses(
         expenses_list, date
     )
-    total_capital, receipts_val, expenses_val = _compute_totals(
-        income_capital, expense_capital, receipts, expenses
-    )
-    _display_stats(date, total_capital, receipts_val, expenses_val, categories)
+    total_capital, _, _, _ = _get_stats_values(income_capital, expense_capital)
+    _display_stats(date, total_capital, receipts, expenses, categories)
 
 
 def _validate_income(blocks: list[str]) -> str:
