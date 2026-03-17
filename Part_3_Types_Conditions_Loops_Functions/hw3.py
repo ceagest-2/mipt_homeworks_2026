@@ -195,19 +195,15 @@ def compare_dates(date1_str: str, date2_str: str) -> int:
     return _compare_value(date1[0], date2[0])
 
 
-def _check_income_date(current_date: str, date: str) -> float:
-    """Check if income date is within range and return amount."""
-    if compare_dates(current_date, date) >= 0:
-        return 1.0
-    return 0.0
+def _check_income_date(current_date: str, date: str) -> int:
+    """Check if income date is within range and return multiplier."""
+    return 1 if compare_dates(current_date, date) >= 0 else 0
 
 
-def _check_month_date(current_date: str, date: str) -> float:
-    """Check if date is in same month and return flag."""
+def _check_month_date(current_date: str, date: str) -> int:
+    """Check if date is in same month and return multiplier."""
     month_cmp = compare_dates_by_month(current_date, date)
-    if month_cmp >= 0 and month_cmp != THE_EDGE_CASE:
-        return 1.0
-    return 0.0
+    return 1 if month_cmp >= 0 and month_cmp != THE_EDGE_CASE else 0
 
 
 def _process_income_item(
@@ -239,11 +235,18 @@ def _accumulate_income(
     return _sum_income_data(capitals)
 
 
-def _check_expense_date(current_date: str, date: str) -> float:
-    """Check if expense date is within range and return amount."""
-    if compare_dates(current_date, date) >= 0:
-        return 1.0
-    return 0.0
+def _check_expense_date(current_date: str, date: str) -> int:
+    """Check if expense date is within range and return multiplier."""
+    return 1 if compare_dates(current_date, date) >= 0 else 0
+
+
+def _update_categories(
+    month_factor: int, category: str, amount: float, categories: dict[str, float]
+) -> None:
+    """Update category amounts if in month range."""
+    if month_factor:
+        current = categories.get(category, 0.0)
+        categories[category] = current + amount
 
 
 def _process_expense_item(
@@ -256,11 +259,7 @@ def _process_expense_item(
     """Process single expense item."""
     cap_factor = _check_expense_date(current_date, date)
     month_factor = _check_month_date(current_date, date)
-
-    if month_factor > 0.0:
-        current = categories.get(category, 0.0)
-        categories[category] = current + amount
-
+    _update_categories(month_factor, category, amount, categories)
     return amount * cap_factor, amount * month_factor
 
 
@@ -336,6 +335,14 @@ def _display_stats(
     _print_categories(categories)
 
 
+def _compute_totals(
+    income_capital: float, expense_capital: float, receipts: float, expenses: float
+) -> tuple[float, float, float]:
+    """Compute total capital and return all necessary values."""
+    total_capital = income_capital + expense_capital
+    return total_capital, receipts, expenses
+
+
 def print_statistics(
     date: str,
     receipts_list: list[tuple[float, str]],
@@ -346,8 +353,10 @@ def print_statistics(
     expense_capital, expenses, categories = _accumulate_expenses(
         expenses_list, date
     )
-    total_capital = income_capital + expense_capital
-    _display_stats(date, total_capital, receipts, expenses, categories)
+    total_capital, receipts_val, expenses_val = _compute_totals(
+        income_capital, expense_capital, receipts, expenses
+    )
+    _display_stats(date, total_capital, receipts_val, expenses_val, categories)
 
 
 def _validate_income(blocks: list[str]) -> str:
@@ -451,6 +460,7 @@ def main() -> None:
             print(validate)
             continue
         _process_command(validate, line, receipts_list, expenses_list)
+
 
 if __name__ == "__main__":
     main()
