@@ -233,10 +233,10 @@ def _print_capital_and_profit(total_capital: float, receipts: float, expenses: f
     print(f"Суммарный капитал: {total_capital:.2f} рублей")
     difference = receipts - expenses
     if difference >= 0:
-        print(f"В этом месяце прибыль составила {difference:.2f} рублей")
+        print(f"В этом месяце прибыль составила {difference:.2f} рублей")  # noqa: RUF001
     else:
         loss = -difference
-        print(f"В этом месяце убыток составил {loss:.2f} рублей")
+        print(f"В этом месяце убыток составил {loss:.2f} рублей")  # noqa: RUF001
 
 
 def _print_income_expense(receipts: float, expenses: float) -> None:
