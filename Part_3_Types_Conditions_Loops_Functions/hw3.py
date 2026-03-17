@@ -353,8 +353,7 @@ def _prepare_stats(
     expense_capital, expenses, categories = _accumulate_expenses(
         expenses_list, date
     )
-    total_capital = income_capital + expense_capital
-    return total_capital, receipts, expenses, categories
+    return income_capital + expense_capital, receipts, expenses, categories
 
 
 def print_statistics(
