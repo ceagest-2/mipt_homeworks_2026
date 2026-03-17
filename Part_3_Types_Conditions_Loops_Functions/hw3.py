@@ -452,6 +452,5 @@ def main() -> None:
             continue
         _process_command(validate, line, receipts_list, expenses_list)
 
-
 if __name__ == "__main__":
     main()
