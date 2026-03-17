@@ -24,7 +24,6 @@ THE_EDGE_CASE = 2
 MONTHS = (4, 6, 9, 11)
 STRING_ZERO = "0"
 POINT_ZERO = ".0"
-DEFAULT_FLOAT = 0.0
 
 
 def is_leap_year(year: int) -> bool:
@@ -58,10 +57,16 @@ def valid_day(maybe_day: str, month: int, year: int) -> bool:
     maybe_day_number = int(maybe_day.lstrip(STRING_ZERO) or STRING_ZERO)
 
     if month == FEBRUARY_MONTH:
-        max_days = LEAP_FEBRUARY_DAYS if is_leap_year(year) else COMMON_FEBRUARY_DAYS
+        max_days = (
+            LEAP_FEBRUARY_DAYS if is_leap_year(year)
+            else COMMON_FEBRUARY_DAYS
+        )
         return 1 <= maybe_day_number <= max_days
 
-    max_days = SHORT_MONTH_DAYS if month in MONTHS else LONG_MONTH_DAYS
+    max_days = (
+        SHORT_MONTH_DAYS if month in MONTHS
+        else LONG_MONTH_DAYS
+    )
     return 1 <= maybe_day_number <= max_days
 
 
@@ -144,7 +149,9 @@ def adding_income(receipt_line: str, receipts: list[tuple[float, str]]) -> None:
     receipts.append((amount, date))
 
 
-def adding_an_expense(expense_line: str, expenses: list[tuple[str, float, str]]) -> None:
+def adding_an_expense(
+    expense_line: str, expenses: list[tuple[str, float, str]]
+) -> None:
     blocks = expense_line.split(" ")
     category = blocks[1]
     amount = float(blocks[2].replace(",", "."))
@@ -192,7 +199,7 @@ def _check_income_date(current_date: str, date: str) -> float:
     """Check if income date is within range and return amount."""
     if compare_dates(current_date, date) >= 0:
         return 1.0
-    return DEFAULT_FLOAT
+    return 0.0
 
 
 def _check_month_date(current_date: str, date: str) -> float:
@@ -200,29 +207,43 @@ def _check_month_date(current_date: str, date: str) -> float:
     month_cmp = compare_dates_by_month(current_date, date)
     if month_cmp >= 0 and month_cmp != THE_EDGE_CASE:
         return 1.0
-    return DEFAULT_FLOAT
+    return 0.0
 
 
-def _process_income_item(amount: float, current_date: str, date: str) -> tuple[float, float]:
+def _process_income_item(
+    amount: float, current_date: str, date: str
+) -> tuple[float, float]:
     """Process single income item."""
     cap_factor = _check_income_date(current_date, date)
     month_factor = _check_month_date(current_date, date)
     return amount * cap_factor, amount * month_factor
 
 
-def _accumulate_income(receipts_list: list[tuple[float, str]], date: str) -> tuple[float, float]:
-    """Accumulate income data."""
-    capitals = [_process_income_item(amount, current_date, date) for amount, current_date in receipts_list]
+def _sum_income_data(
+    capitals: list[tuple[float, float]],
+) -> tuple[float, float]:
+    """Sum income capital and receipts."""
     total_capital = sum(cap for cap, _ in capitals)
     total_receipts = sum(rec for _, rec in capitals)
     return total_capital, total_receipts
+
+
+def _accumulate_income(
+    receipts_list: list[tuple[float, str]], date: str
+) -> tuple[float, float]:
+    """Accumulate income data."""
+    capitals = [
+        _process_income_item(amount, current_date, date)
+        for amount, current_date in receipts_list
+    ]
+    return _sum_income_data(capitals)
 
 
 def _check_expense_date(current_date: str, date: str) -> float:
     """Check if expense date is within range and return amount."""
     if compare_dates(current_date, date) >= 0:
         return 1.0
-    return DEFAULT_FLOAT
+    return 0.0
 
 
 def _process_expense_item(
@@ -236,11 +257,20 @@ def _process_expense_item(
     cap_factor = _check_expense_date(current_date, date)
     month_factor = _check_month_date(current_date, date)
 
-    if month_factor > DEFAULT_FLOAT:
-        current = categories.get(category, DEFAULT_FLOAT)
+    if month_factor > 0.0:
+        current = categories.get(category, 0.0)
         categories[category] = current + amount
 
     return amount * cap_factor, amount * month_factor
+
+
+def _sum_expense_data(
+    expenses_data: list[tuple[float, float]],
+) -> tuple[float, float]:
+    """Sum expense capital and expenses."""
+    total_capital = sum(cap for cap, _ in expenses_data)
+    total_expenses = sum(exp for _, exp in expenses_data)
+    return total_capital, total_expenses
 
 
 def _accumulate_expenses(
@@ -252,14 +282,18 @@ def _accumulate_expenses(
         _process_expense_item(category, amount, current_date, date, categories)
         for category, amount, current_date in expenses_list
     ]
-    total_capital = sum(cap for cap, _ in expenses_data)
-    total_expenses = sum(exp for _, exp in expenses_data)
+    total_capital, total_expenses = _sum_expense_data(expenses_data)
     return total_capital, total_expenses, categories
 
 
 def _print_statistics_header(date: str) -> None:
     """Print statistics header."""
     print(f"Ваша статистика по состоянию на {date}:")
+
+
+def _print_capital(total_capital: float) -> None:
+    """Print capital information."""
+    print(f"Суммарный капитал: {total_capital:.2f} рублей")
 
 
 def _print_profit_loss(receipts: float, expenses: float) -> None:
@@ -287,18 +321,16 @@ def _print_categories(categories: dict[str, float]) -> None:
         print(f"{index}. {key}: {amount:.2f}")
 
 
-def _display_stats(  # noqa: PLR0913
+def _display_stats(
     date: str,
-    income_capital: float,
-    expense_capital: float,
+    total_capital: float,
     receipts: float,
     expenses: float,
     categories: dict[str, float],
 ) -> None:
     """Display all statistics."""
     _print_statistics_header(date)
-    total_capital = income_capital + expense_capital
-    print(f"Суммарный капитал: {total_capital:.2f} рублей")
+    _print_capital(total_capital)
     _print_profit_loss(receipts, expenses)
     _print_income_expense(receipts, expenses)
     _print_categories(categories)
@@ -311,8 +343,11 @@ def print_statistics(
 ) -> None:
     """Print statistics for the given date."""
     income_capital, receipts = _accumulate_income(receipts_list, date)
-    expense_capital, expenses, categories = _accumulate_expenses(expenses_list, date)
-    _display_stats(date, income_capital, expense_capital, receipts, expenses, categories)
+    expense_capital, expenses, categories = _accumulate_expenses(
+        expenses_list, date
+    )
+    total_capital = income_capital + expense_capital
+    _display_stats(date, total_capital, receipts, expenses, categories)
 
 
 def _validate_income(blocks: list[str]) -> str:
