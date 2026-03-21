@@ -313,14 +313,10 @@ def _collect_stats(parsed_report_date: DateTuple) -> StatsData:
     return totals, month_category_expenses
 
 
-def _build_stats_lines(
-    report_date: str,
-    totals: TotalsMap,
-    month_category_expenses: CategoryExpensesMap,
-) -> list[str]:
+def _build_stats_summary_lines(report_date: str, totals: TotalsMap) -> list[str]:
     month_balance = totals[TOTAL_INCOME_KEY] - totals[TOTAL_EXPENSES_KEY]
     month_result = "profit" if month_balance >= 0 else "loss"
-    lines = [
+    return [
         f"Your statistics as of {report_date}:",
         f"Total capital: {totals[TOTAL_CAPITAL_KEY]:.2f} rubles",
         f"This month, the {month_result} amounted to {abs(month_balance):.2f} rubles.",
@@ -329,9 +325,21 @@ def _build_stats_lines(
         "",
         "Details (category: amount):",
     ]
+
+
+def _append_sorted_category_lines(lines: list[str], month_category_expenses: CategoryExpensesMap) -> None:
     sorted_categories = sorted(month_category_expenses.items(), key=lambda item: item[0])
     for index, (category_title, amount) in enumerate(sorted_categories, start=1):
         lines.append(f"{index}. {category_title}: {_format_amount(amount)}")
+
+
+def _build_stats_lines(
+    report_date: str,
+    totals: TotalsMap,
+    month_category_expenses: CategoryExpensesMap,
+) -> list[str]:
+    lines = _build_stats_summary_lines(report_date, totals)
+    _append_sorted_category_lines(lines, month_category_expenses)
     return lines
 
 
