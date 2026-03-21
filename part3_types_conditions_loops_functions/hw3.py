@@ -8,6 +8,13 @@ INCORRECT_DATE_MSG = "Invalid date!"
 NOT_EXISTS_CATEGORY = "Category not exists!"
 OP_SUCCESS_MSG = "Added"
 
+DATE_LENGTH = 10
+MAX_MONTH = 12
+INCOME_ARGS_COUNT = 3
+COST_CATEGORIES_ARGS_COUNT = 2
+COST_ARGS_COUNT = 4
+STATS_ARGS_COUNT = 2
+
 
 EXPENSE_CATEGORIES = {
     "Food": ("Supermarket", "Restaurants", "FastFood", "Coffee", "Delivery"),
@@ -44,7 +51,7 @@ def extract_date(maybe_dt: str) -> tuple[int, int, int] | None:
     :return: typle формата (день, месяц, год) или None, если дата неправильная.
     :rtype: tuple[int, int, int] | None
     """
-    if len(maybe_dt) != 10:
+    if len(maybe_dt) != DATE_LENGTH:
         return None
 
     if maybe_dt[2] != "-" or maybe_dt[5] != "-":
@@ -61,7 +68,7 @@ def extract_date(maybe_dt: str) -> tuple[int, int, int] | None:
     month = int(month_part)
     year = int(year_part)
 
-    if year < 1 or month < 1 or month > 12:
+    if year < 1 or month < 1 or month > MAX_MONTH:
         return None
 
     days_in_month = {
@@ -85,7 +92,7 @@ def extract_date(maybe_dt: str) -> tuple[int, int, int] | None:
     return day, month, year
 
 
-def _extract_amount(raw_amount: str) -> float | None:
+def _split_sign(raw_amount: str) -> tuple[int, str] | None:
     if not raw_amount:
         return None
 
@@ -100,32 +107,49 @@ def _extract_amount(raw_amount: str) -> float | None:
     numeric_part = raw_amount[start_index:]
     if not numeric_part:
         return None
+    return sign, numeric_part
 
+
+def _parse_unsigned_decimal(value: str) -> float | None:
     separator_count = 0
-    for char in numeric_part:
+    is_valid = True
+    for char in value:
         if char in ".,":
             separator_count += 1
         elif not char.isdigit():
-            return None
+            is_valid = False
 
-    if separator_count > 1:
+    result: float | None = None
+    if is_valid and separator_count <= 1:
+        normalized = value.replace(",", ".")
+        if "." in normalized:
+            integer_part, fractional_part = normalized.split(".", maxsplit=1)
+            if (
+                integer_part
+                and fractional_part
+                and integer_part.isdigit()
+                and fractional_part.isdigit()
+            ):
+                integer_value = int(integer_part)
+                fractional_value = int(fractional_part)
+                divisor = 10 ** len(fractional_part)
+                result = integer_value + (fractional_value / divisor)
+        elif normalized.isdigit():
+            result = float(int(normalized))
+
+    return result
+
+
+def _extract_amount(raw_amount: str) -> float | None:
+    signed_amount = _split_sign(raw_amount)
+    if signed_amount is None:
         return None
 
-    normalized = numeric_part.replace(",", ".")
-    if "." in normalized:
-        integer_part, fractional_part = normalized.split(".", maxsplit=1)
-        if not integer_part or not fractional_part:
-            return None
-        if not (integer_part.isdigit() and fractional_part.isdigit()):
-            return None
-        integer_value = int(integer_part)
-        fractional_value = int(fractional_part)
-        divisor = 10 ** len(fractional_part)
-        return sign * (integer_value + (fractional_value / divisor))
-
-    if not normalized.isdigit():
+    sign, numeric_part = signed_amount
+    parsed_amount = _parse_unsigned_decimal(numeric_part)
+    if parsed_amount is None:
         return None
-    return sign * float(int(normalized))
+    return sign * parsed_amount
 
 
 def _is_valid_cost_category(category_name: str) -> bool:
@@ -262,65 +286,69 @@ def stats_handler(report_date: str) -> str:
     return "\n".join(lines)
 
 
-def main() -> None:
-    command = input().strip()
-    if not command:
-        print(UNKNOWN_COMMAND_MSG)
-        return
+def _handle_income_command(command_parts: list[str]) -> list[str]:
+    if len(command_parts) != INCOME_ARGS_COUNT:
+        return [UNKNOWN_COMMAND_MSG]
 
-    command_parts = command.split()
+    raw_amount = command_parts[1]
+    date_value = command_parts[2]
+
+    parsed_amount = _extract_amount(raw_amount)
+    if parsed_amount is None:
+        return [UNKNOWN_COMMAND_MSG]
+    return [income_handler(parsed_amount, date_value)]
+
+
+def _handle_cost_command(command_parts: list[str]) -> list[str]:
+    if (
+        len(command_parts) == COST_CATEGORIES_ARGS_COUNT
+        and command_parts[1] == "categories"
+    ):
+        return [cost_categories_handler()]
+
+    if len(command_parts) != COST_ARGS_COUNT:
+        return [UNKNOWN_COMMAND_MSG]
+
+    category_name = command_parts[1]
+    raw_amount = command_parts[2]
+    date_value = command_parts[3]
+
+    parsed_amount = _extract_amount(raw_amount)
+    if parsed_amount is None:
+        return [UNKNOWN_COMMAND_MSG]
+
+    result = cost_handler(category_name, parsed_amount, date_value)
+    responses = [result]
+    if result == NOT_EXISTS_CATEGORY:
+        responses.append(cost_categories_handler())
+    return responses
+
+
+def _handle_stats_command(command_parts: list[str]) -> list[str]:
+    if len(command_parts) != STATS_ARGS_COUNT:
+        return [UNKNOWN_COMMAND_MSG]
+    date_value = command_parts[1]
+    return [stats_handler(date_value)]
+
+
+def _handle_command(command_parts: list[str]) -> list[str]:
+    if not command_parts:
+        return [UNKNOWN_COMMAND_MSG]
+
     root_command = command_parts[0]
-
     if root_command == "income":
-        if len(command_parts) != 3:
-            print(UNKNOWN_COMMAND_MSG)
-            return
-
-        raw_amount = command_parts[1]
-        date_value = command_parts[2]
-
-        parsed_amount = _extract_amount(raw_amount)
-        if parsed_amount is None:
-            print(UNKNOWN_COMMAND_MSG)
-            return
-
-        print(income_handler(parsed_amount, date_value))
-        return
-
+        return _handle_income_command(command_parts)
     if root_command == "cost":
-        if len(command_parts) == 2 and command_parts[1] == "categories":
-            print(cost_categories_handler())
-            return
-
-        if len(command_parts) != 4:
-            print(UNKNOWN_COMMAND_MSG)
-            return
-
-        category_name = command_parts[1]
-        raw_amount = command_parts[2]
-        date_value = command_parts[3]
-
-        parsed_amount = _extract_amount(raw_amount)
-        if parsed_amount is None:
-            print(UNKNOWN_COMMAND_MSG)
-            return
-
-        result = cost_handler(category_name, parsed_amount, date_value)
-        print(result)
-        if result == NOT_EXISTS_CATEGORY:
-            print(cost_categories_handler())
-        return
-
+        return _handle_cost_command(command_parts)
     if root_command == "stats":
-        if len(command_parts) != 2:
-            print(UNKNOWN_COMMAND_MSG)
-            return
+        return _handle_stats_command(command_parts)
+    return [UNKNOWN_COMMAND_MSG]
 
-        date_value = command_parts[1]
-        print(stats_handler(date_value))
-        return
 
-    print(UNKNOWN_COMMAND_MSG)
+def main() -> None:
+    command_parts = input().strip().split()
+    for response in _handle_command(command_parts):
+        print(response)
 
 
 if __name__ == "__main__":
