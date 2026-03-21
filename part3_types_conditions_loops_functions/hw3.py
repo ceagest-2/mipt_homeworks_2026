@@ -14,7 +14,9 @@ INCOME_ARGS_COUNT = 3
 COST_CATEGORIES_ARGS_COUNT = 2
 COST_ARGS_COUNT = 4
 STATS_ARGS_COUNT = 2
-ZERO_AMOUNT = 0
+ZERO_AMOUNT = 0.0
+FEBRUARY_MONTH = 2
+LEAP_FEBRUARY_DAYS = 29
 
 type DateTuple = tuple[int, int, int]
 
@@ -76,8 +78,8 @@ def _extract_date_digits(maybe_dt: str) -> DateTuple | None:
 
 def _is_valid_day(day: int, month: int, year: int) -> bool:
     max_day = DAYS_IN_MONTH[month]
-    if month == 2 and is_leap_year(year):
-        max_day = 29
+    if month == FEBRUARY_MONTH and is_leap_year(year):
+        max_day = LEAP_FEBRUARY_DAYS
     return 1 <= day <= max_day
 
 
@@ -144,8 +146,11 @@ def _parse_unsigned_decimal(value: str) -> float | None:
     if parsed_parts is None:
         return None
 
+    integer_part: str
+    fractional_part: str
     integer_part, fractional_part = parsed_parts
-    return int(integer_part) + (int(fractional_part) / (10 ** len(fractional_part)))
+    fractional_divisor = float(10 ** len(fractional_part))
+    return float(int(integer_part)) + (int(fractional_part) / fractional_divisor)
 
 
 def _extract_amount(raw_amount: str) -> float | None:
@@ -250,23 +255,6 @@ def _apply_income(
         totals["income"] += amount
 
 
-def _apply_expense(
-    category_name: str,
-    amount: float,
-    transaction_date: DateTuple,
-    parsed_report_date: DateTuple,
-    totals: dict[str, float],
-    month_category_expenses: dict[str, float],
-) -> None:
-    totals["capital"] -= amount
-    if _is_same_month(transaction_date, parsed_report_date):
-        totals["expenses"] += amount
-        category_title = category_name.split("::", maxsplit=1)[1]
-        month_category_expenses[category_title] = (
-            month_category_expenses.get(category_title, ZERO_AMOUNT) + amount
-        )
-
-
 def _update_stats_by_transaction(
     transaction: dict[str, Any],
     parsed_report_date: DateTuple,
@@ -284,18 +272,21 @@ def _update_stats_by_transaction(
         _apply_income(amount, transaction_date, parsed_report_date, totals)
         return
 
-    _apply_expense(
-        category_name,
-        amount,
-        transaction_date,
-        parsed_report_date,
-        totals,
-        month_category_expenses,
-    )
+    totals["capital"] -= amount
+    if _is_same_month(transaction_date, parsed_report_date):
+        totals["expenses"] += amount
+        category_title = category_name.split("::", maxsplit=1)[1]
+        month_category_expenses[category_title] = (
+            month_category_expenses.get(category_title, ZERO_AMOUNT) + amount
+        )
 
 
 def _collect_stats(parsed_report_date: DateTuple) -> tuple[dict[str, float], dict[str, float]]:
-    totals = {"income": ZERO_AMOUNT, "expenses": ZERO_AMOUNT, "capital": ZERO_AMOUNT}
+    totals: dict[str, float] = {
+        "income": ZERO_AMOUNT,
+        "expenses": ZERO_AMOUNT,
+        "capital": ZERO_AMOUNT,
+    }
     month_category_expenses: dict[str, float] = {}
     report_key = _date_key(parsed_report_date)
 
