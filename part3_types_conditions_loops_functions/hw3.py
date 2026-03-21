@@ -101,14 +101,14 @@ def extract_date(maybe_dt: str) -> DateTuple | None:
     :return: typle формата (день, месяц, год) или None, если дата неправильная.
     :rtype: tuple[int, int, int] | None
     """
-    if len(maybe_dt) != DATE_LENGTH:
-        return None
-    if maybe_dt[2] != "-":
-        return None
-    if maybe_dt[5] != "-":
-        return None
+    parsed_date: DateTuple | None = None
+    if (
+        len(maybe_dt) == DATE_LENGTH
+        and maybe_dt[2] == "-"
+        and maybe_dt[5] == "-"
+    ):
+        parsed_date = _extract_date_digits(maybe_dt)
 
-    parsed_date = _extract_date_digits(maybe_dt)
     if parsed_date is None:
         return None
     day, month, year = parsed_date
@@ -116,10 +116,7 @@ def extract_date(maybe_dt: str) -> DateTuple | None:
     if year < 1 or month < 1 or month > MAX_MONTH:
         return None
 
-    if not _is_valid_day(day, month, year):
-        return None
-
-    return day, month, year
+    return (day, month, year) if _is_valid_day(day, month, year) else None
 
 
 def _split_sign(raw_amount: str) -> tuple[int, str] | None:
