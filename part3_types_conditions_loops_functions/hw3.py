@@ -14,7 +14,6 @@ INCOME_ARGS_COUNT = 3
 COST_CATEGORIES_ARGS_COUNT = 2
 COST_ARGS_COUNT = 4
 STATS_ARGS_COUNT = 2
-ZERO_AMOUNT = 0
 FEBRUARY_MONTH = 2
 LEAP_FEBRUARY_DAYS = 29
 
@@ -288,15 +287,15 @@ def _update_stats_by_transaction(
         totals[TOTAL_EXPENSES_KEY] += amount
         category_title = category_name.split("::", maxsplit=1)[1]
         month_category_expenses[category_title] = (
-            month_category_expenses.get(category_title, ZERO_AMOUNT) + amount
+            month_category_expenses.get(category_title, 0) + amount
         )
 
 
 def _collect_stats(parsed_report_date: DateTuple) -> StatsData:
     totals: TotalsMap = {
-        TOTAL_INCOME_KEY: ZERO_AMOUNT,
-        TOTAL_EXPENSES_KEY: ZERO_AMOUNT,
-        TOTAL_CAPITAL_KEY: ZERO_AMOUNT,
+        TOTAL_INCOME_KEY: 0,
+        TOTAL_EXPENSES_KEY: 0,
+        TOTAL_CAPITAL_KEY: 0,
     }
     month_category_expenses: CategoryExpensesMap = {}
     report_key = _date_key(parsed_report_date)
