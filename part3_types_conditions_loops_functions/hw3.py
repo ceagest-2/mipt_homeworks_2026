@@ -85,6 +85,12 @@ def _extract_date_digits(maybe_dt: str) -> DateTuple | None:
     return int(day_part), int(month_part), int(year_part)
 
 
+def _has_valid_date_separators(maybe_dt: str) -> bool:
+    if len(maybe_dt) != DATE_LENGTH:
+        return False
+    return maybe_dt[2] == "-" and maybe_dt[5] == "-"
+
+
 def _is_valid_day(day: int, month: int, year: int) -> bool:
     max_day = DAYS_IN_MONTH[month]
     if month == FEBRUARY_MONTH and is_leap_year(year):
@@ -101,7 +107,7 @@ def extract_date(maybe_dt: str) -> DateTuple | None:
     :rtype: tuple[int, int, int] | None
     """
     parsed_date: DateTuple | None = None
-    if len(maybe_dt) == DATE_LENGTH and maybe_dt[2] == "-" and maybe_dt[5] == "-":
+    if _has_valid_date_separators(maybe_dt):
         parsed_date = _extract_date_digits(maybe_dt)
 
     if parsed_date is None:
@@ -227,8 +233,16 @@ def cost_handler(category_name: str, amount: float, income_date: str) -> str:
     return OP_SUCCESS_MSG
 
 
+def _all_cost_categories() -> list[str]:
+    categories: list[str] = []
+    for common_category, targets in EXPENSE_CATEGORIES.items():
+        for target_category in targets:
+            categories.append(f"{common_category}::{target_category}")
+    return categories
+
+
 def cost_categories_handler() -> str:
-    return "\n".join(f"{common}::{target}" for common, targets in EXPENSE_CATEGORIES.items() for target in targets)
+    return "\n".join(_all_cost_categories())
 
 
 def _format_amount(amount: float) -> str:
