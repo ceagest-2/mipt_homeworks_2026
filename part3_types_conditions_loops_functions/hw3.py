@@ -101,11 +101,7 @@ def extract_date(maybe_dt: str) -> DateTuple | None:
     :rtype: tuple[int, int, int] | None
     """
     parsed_date: DateTuple | None = None
-    if (
-        len(maybe_dt) == DATE_LENGTH
-        and maybe_dt[2] == "-"
-        and maybe_dt[5] == "-"
-    ):
+    if len(maybe_dt) == DATE_LENGTH and maybe_dt[2] == "-" and maybe_dt[5] == "-":
         parsed_date = _extract_date_digits(maybe_dt)
 
     if parsed_date is None:
@@ -232,11 +228,7 @@ def cost_handler(category_name: str, amount: float, income_date: str) -> str:
 
 
 def cost_categories_handler() -> str:
-    return "\n".join(
-        f"{common}::{target}"
-        for common, targets in EXPENSE_CATEGORIES.items()
-        for target in targets
-    )
+    return "\n".join(f"{common}::{target}" for common, targets in EXPENSE_CATEGORIES.items() for target in targets)
 
 
 def _format_amount(amount: float) -> str:
@@ -286,9 +278,7 @@ def _update_stats_by_transaction(
     if _is_same_month(transaction_date, parsed_report_date):
         totals[TOTAL_EXPENSES_KEY] += amount
         category_title = category_name.split("::", maxsplit=1)[1]
-        month_category_expenses[category_title] = (
-            month_category_expenses.get(category_title, 0) + amount
-        )
+        month_category_expenses[category_title] = month_category_expenses.get(category_title, 0) + amount
 
 
 def _collect_stats(parsed_report_date: DateTuple) -> StatsData:
@@ -365,10 +355,7 @@ def _handle_income_command(command_parts: list[str]) -> list[str]:
 
 
 def _handle_cost_command(command_parts: list[str]) -> list[str]:
-    if (
-        len(command_parts) == COST_CATEGORIES_ARGS_COUNT
-        and command_parts[1] == "categories"
-    ):
+    if len(command_parts) == COST_CATEGORIES_ARGS_COUNT and command_parts[1] == "categories":
         return [cost_categories_handler()]
 
     if len(command_parts) != COST_ARGS_COUNT:
