@@ -236,8 +236,7 @@ def cost_handler(category_name: str, amount: float, income_date: str) -> str:
 def _all_cost_categories() -> list[str]:
     categories: list[str] = []
     for common_category, targets in EXPENSE_CATEGORIES.items():
-        for target_category in targets:
-            categories.append(f"{common_category}::{target_category}")
+        categories.extend(f"{common_category}::{target_category}" for target_category in targets)
     return categories
 
 
