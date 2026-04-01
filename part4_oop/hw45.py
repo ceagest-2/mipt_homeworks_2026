@@ -60,10 +60,10 @@ class LRUPolicy(Policy[K]):
     _order: list[K] = field(default_factory=list, init=False)
 
     def register_access(self, key: K) -> None:
-        if key not in self._order:
+        if key in self._order:
+            self._order.remove(key)
             self._order.append(key)
         else:
-            self._order.remove(key)
             self._order.append(key)
 
     def get_key_to_evict(self) -> K | None:
@@ -88,18 +88,20 @@ class LFUPolicy(Policy[K]):
     _key_counter: dict[K, int] = field(default_factory=dict, init=False)
 
     def register_access(self, key: K) -> None:
-        if key not in self._key_counter:
-            self._key_counter[key] = 1
-        else:
+        if key in self._key_counter:
             self._key_counter[key] = self._key_counter[key] + 1
+        else:
+            self._key_counter[key] = 1
 
     def get_key_to_evict(self) -> K | None:
         if len(self._key_counter) > self.capacity:
-            least_number_of_requests = max(self._key_counter.values()) + 1
+            min_requests = max(self._key_counter.values()) + 1
             key_to_delete = None
             for key in self._key_counter:
-                if self._key_counter[key] < least_number_of_requests and key != list(self._key_counter)[-1]:
-                    least_number_of_requests = self._key_counter[key]
+                key_count = self._key_counter[key]
+                last_added_key = list(self._key_counter)[-1]
+                if key_count < min_requests and key != last_added_key:
+                    min_requests = self._key_counter[key]
                     key_to_delete = key
             return key_to_delete
         return None
