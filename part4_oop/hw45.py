@@ -125,10 +125,11 @@ class MIPTCache(Cache[K, V]):
     def set(self, key: K, value: V) -> None:
         self.storage.set(key, value)
         self.policy.register_access(key)
-        if self.policy.get_key_to_evict() is not None:
-            key_to_delete = self.policy.get_key_to_evict()
-            self.storage.remove(key_to_delete)
-            self.policy.remove_key(key_to_delete)
+        key_to_delete = self.policy.get_key_to_evict()
+        if key_to_delete is None:
+            return
+        self.storage.remove(key_to_delete)
+        self.policy.remove_key(key_to_delete)
 
     def get(self, key: K) -> V | None:
         self.policy.register_access(key)
@@ -156,7 +157,9 @@ class CachedProperty[V]:
             return self
         key = self._func.__name__
         if instance.cache.exists(key):
-            return instance.cache.get(key)
+            cached_value = instance.cache.get(key)
+            if cached_value is not None:
+                return cached_value
         value = self._func(instance)
         instance.cache.set(key, value)
         return value
