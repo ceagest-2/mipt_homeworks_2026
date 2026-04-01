@@ -89,7 +89,7 @@ class LFUPolicy(Policy[K]):
 
     def register_access(self, key: K) -> None:
         if key in self._key_counter:
-            self._key_counter.update({key: self._key_counter.get(key) + 1})
+            self._key_counter[key] += 1
         else:
             self._key_counter.update({key: 1})
 
@@ -152,7 +152,7 @@ class CachedProperty[V]:
     def __init__(self, func: Callable[..., V]) -> None:
         self._func = func
 
-    def __get__(self, instance: HasCache[Any, Any] | None, owner: type) -> V:
+    def __get__(self, instance: HasCache[Any, V] | None, owner: type) -> "CachedProperty[V] | V":
         if instance is None:
             return self
         key = self._func.__name__
