@@ -89,7 +89,7 @@ class LFUPolicy(Policy[K]):
 
     def register_access(self, key: K) -> None:
         if key in self._key_counter:
-            self._key_counter[key] = self._key_counter[key] + 1
+            self._key_counter[key] = self._key_counter.get(key) + 1
         else:
             self._key_counter[key] = 1
 
