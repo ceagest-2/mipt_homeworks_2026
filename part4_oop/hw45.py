@@ -62,9 +62,7 @@ class LRUPolicy(Policy[K]):
     def register_access(self, key: K) -> None:
         if key in self._order:
             self._order.remove(key)
-            self._order.append(key)
-        else:
-            self._order.append(key)
+        self._order.append(key)
 
     def get_key_to_evict(self) -> K | None:
         if len(self._order) > self.capacity:
@@ -104,7 +102,8 @@ class LFUPolicy(Policy[K]):
         return None
 
     def remove_key(self, key: K) -> None:
-        del self._key_counter[key]
+        if key in self._key_counter:
+            self._key_counter.pop(key)
 
     def clear(self) -> None:
         self._key_counter.clear()
@@ -136,9 +135,10 @@ class MIPTCache(Cache[K, V]):
         return self.storage.exists(key)
 
     def remove(self, key: K) -> None:
-        if self.exists(key):
-            self.storage.remove(key)
-            self.policy.remove_key(key)
+        if not self.exists(key):
+            return
+        self.storage.remove(key)
+        self.policy.remove_key(key)
 
     def clear(self) -> None:
         self.storage.clear()
