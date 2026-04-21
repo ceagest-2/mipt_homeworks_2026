@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from functools import wraps
 from typing import Any, ParamSpec, Protocol, TypeVar
 from urllib.request import urlopen
@@ -113,9 +113,9 @@ class CircuitBreaker:
         if state.failed_count < self.critical_count:
             return
 
-        block_time = datetime.now(datetime.UTC)
+        block_time = datetime.now(UTC)
         state.block_time = block_time
-        state.blocked_until = block_time + datetime.timedelta(seconds=self.time_to_recover)
+        state.blocked_until = block_time + timedelta(seconds=self.time_to_recover)
         state.failed_count = 0
         raise BreakerError(func_name=func_name, block_time=block_time) from error
 
