@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from functools import wraps
 from typing import Any, ParamSpec, Protocol, TypeVar
 from urllib.request import urlopen
@@ -70,7 +70,7 @@ class CircuitBreaker:
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> R_co:
-        now = datetime.now(datetime.UTC)
+        now = datetime.now(UTC)
         func_name = f"{func.__module__}.{func.__name__}"
         blocking_error = self._get_blocking_error(state, now, func_name)
         if blocking_error is not None:
