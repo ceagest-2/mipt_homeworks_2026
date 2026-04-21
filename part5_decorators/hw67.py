@@ -1,6 +1,6 @@
-import datetime
 import json
 from dataclasses import dataclass
+from datetime import datetime
 from functools import wraps
 from typing import Any, ParamSpec, Protocol, TypeVar
 from urllib.request import urlopen
@@ -23,7 +23,7 @@ class CallableWithMeta(Protocol[P, R_co]):
 
 
 class BreakerError(Exception):
-    def __init__(self, func_name: str, block_time: datetime.datetime):
+    def __init__(self, func_name: str, block_time: datetime):
         self.func_name = func_name
         self.block_time = block_time
         super().__init__(TOO_MUCH)
@@ -32,12 +32,8 @@ class BreakerError(Exception):
 @dataclass
 class _BreakerState:
     failed_count: int = 0
-    blocked_until: datetime.datetime | None = None
-    block_time: datetime.datetime | None = None
-
-
-def _utc_now() -> datetime.datetime:
-    return datetime.datetime.now(datetime.UTC)
+    blocked_until: datetime | None = None
+    block_time: datetime | None = None
 
 
 class CircuitBreaker:
@@ -48,16 +44,14 @@ class CircuitBreaker:
         triggers_on: type[Exception] = Exception,
     ):
         exceptions: list[ValueError] = []
-        if isinstance(critical_count, int) and (critical_count > 0):
-            self.critical_count = critical_count
-        else:
+        if not isinstance(critical_count, int) or (critical_count <= 0):
             exceptions.append(ValueError(INVALID_CRITICAL_COUNT))
-        if isinstance(time_to_recover, int) and (time_to_recover > 0):
-            self.time_to_recover = time_to_recover
-        else:
+        if not isinstance(time_to_recover, int) or (time_to_recover <= 0):
             exceptions.append(ValueError(INVALID_RECOVERY_TIME))
         if len(exceptions) > 0:
             raise ExceptionGroup(VALIDATIONS_FAILED, exceptions)
+        self.critical_count = critical_count
+        self.time_to_recover = time_to_recover
         self.triggers_on = triggers_on
 
     def __call__(self, func: CallableWithMeta[P, R_co]) -> CallableWithMeta[P, R_co]:
@@ -76,7 +70,7 @@ class CircuitBreaker:
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> R_co:
-        now = _utc_now()
+        now = datetime.now(datetime.UTC)
         func_name = f"{func.__module__}.{func.__name__}"
         blocking_error = self._get_blocking_error(state, now, func_name)
         if blocking_error is not None:
@@ -94,7 +88,7 @@ class CircuitBreaker:
     def _get_blocking_error(
         self,
         state: _BreakerState,
-        now: datetime.datetime,
+        now: datetime,
         func_name: str,
     ) -> BreakerError | None:
         if state.blocked_until is None:
@@ -119,7 +113,7 @@ class CircuitBreaker:
         if state.failed_count < self.critical_count:
             return
 
-        block_time = _utc_now()
+        block_time = datetime.now(datetime.UTC)
         state.block_time = block_time
         state.blocked_until = block_time + datetime.timedelta(seconds=self.time_to_recover)
         state.failed_count = 0
